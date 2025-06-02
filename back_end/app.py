@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 from data import get_random_sentence, get_random_by_tense
 
 app = Flask(__name__)
@@ -15,4 +16,5 @@ def sentence_by_tense():
     return jsonify(get_random_by_tense(tense))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))  # Render will set PORT env var
+    app.run(debug=True, host="0.0.0.0", port=port)
