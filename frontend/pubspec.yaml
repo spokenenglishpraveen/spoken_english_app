@@ -2,6 +2,10 @@ name: frontend
 description: A new Flutter project.
 publish_to: 'none'
 
+dependencies:
+  http: ^0.13.5
+
+
 version: 1.0.0+1
 
 environment:
