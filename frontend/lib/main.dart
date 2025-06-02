@@ -1,153 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
-  runApp(PracticeApp());
+  runApp(MyApp());
 }
 
-class PracticeApp extends StatelessWidget {
+// Base URL for your Flask backend (change to your deployed URL)
+const String baseUrl = 'http://YOUR_FLASK_BACKEND_URL';
+
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Practice Verbs',
+      title: 'Tense Practice',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: PracticeHomePage(),
-      debugShowCheckedModeBanner: false,
+      home: HomeScreen(),
+      routes: {
+        '/all_tenses': (_) => PracticeAllTensesScreen(),
+        '/tense_wise': (_) => TenseWisePracticeScreen(),
+      },
     );
   }
 }
 
-class PracticeHomePage extends StatefulWidget {
-  @override
-  _PracticeHomePageState createState() => _PracticeHomePageState();
-}
-
-class _PracticeHomePageState extends State<PracticeHomePage> {
-  // Sample data for practice
-  final List<Map<String, String>> verbs = [
-    {
-      'telugu': 'చదువు',
-      'english': 'study',
-      'past': 'studied',
-      'present_participle': 'studying',
-      'example_telugu': 'నేను చదువుతున్నాను',
-      'example_english': 'I am studying',
-    },
-    {
-      'telugu': 'రాయడం',
-      'english': 'write',
-      'past': 'wrote',
-      'present_participle': 'writing',
-      'example_telugu': 'అవను లేఖ రాస్తున్నాడు',
-      'example_english': 'He is writing a letter',
-    },
-    // Add more verbs here...
-  ];
-
-  int currentIndex = 0;
-  final TextEditingController answerController = TextEditingController();
-  String feedback = '';
-  bool showAnswer = false;
-
-  void nextVerb() {
-    setState(() {
-      feedback = '';
-      showAnswer = false;
-      answerController.clear();
-      currentIndex = (currentIndex + 1) % verbs.length;
-    });
-  }
-
-  void previousVerb() {
-    setState(() {
-      feedback = '';
-      showAnswer = false;
-      answerController.clear();
-      currentIndex = (currentIndex - 1 + verbs.length) % verbs.length;
-    });
-  }
-
-  void checkAnswer() {
-    String userAnswer = answerController.text.trim().toLowerCase();
-    String correctAnswer = verbs[currentIndex]['english']!.toLowerCase();
-
-    setState(() {
-      if (userAnswer == correctAnswer) {
-        feedback = 'Correct!';
-      } else {
-        feedback = 'Incorrect! Try again or press Show Answer.';
-      }
-    });
-  }
-
-  void toggleShowAnswer() {
-    setState(() {
-      showAnswer = !showAnswer;
-      feedback = '';
-    });
-  }
-
+class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    var currentVerb = verbs[currentIndex];
-
     return Scaffold(
-      appBar: AppBar(title: Text('Practice Verbs')),
-      body: Padding(
-        padding: EdgeInsets.all(16),
+      appBar: AppBar(title: const Text('Tense Practice Home')),
+      drawer: AppDrawer(),
+      body: Center(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Translate this Telugu verb into English:',
-              style: TextStyle(fontSize: 18),
+            ElevatedButton(
+              child: Text('Practice All Tenses'),
+              onPressed: () => Navigator.pushNamed(context, '/all_tenses'),
             ),
-            SizedBox(height: 12),
-            Text(
-              currentVerb['telugu']!,
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 24),
-            TextField(
-              controller: answerController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Your Answer',
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              feedback,
-              style: TextStyle(
-                fontSize: 18,
-                color: feedback == 'Correct!' ? Colors.green : Colors.red,
-              ),
-            ),
-            if (showAnswer)
-              Card(
-                margin: EdgeInsets.symmetric(vertical: 20),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text('Answer: ${currentVerb['english']}', style: TextStyle(fontSize: 20)),
-                      SizedBox(height: 8),
-                      Text('Past form: ${currentVerb['past']}'),
-                      Text('Present Participle: ${currentVerb['present_participle']}'),
-                      SizedBox(height: 12),
-                      Text('Example (Telugu): ${currentVerb['example_telugu']}'),
-                      Text('Example (English): ${currentVerb['example_english']}'),
-                    ],
-                  ),
-                ),
-              ),
-            Spacer(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                ElevatedButton(onPressed: previousVerb, child: Text('Previous')),
-                ElevatedButton(onPressed: checkAnswer, child: Text('Check Answer')),
-                ElevatedButton(onPressed: toggleShowAnswer, child: Text(showAnswer ? 'Hide Answer' : 'Show Answer')),
-                ElevatedButton(onPressed: nextVerb, child: Text('Next')),
-              ],
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('Tense-wise Practice'),
+              onPressed: () => Navigator.pushNamed(context, '/tense_wise'),
             ),
           ],
         ),
@@ -155,3 +49,290 @@ class _PracticeHomePageState extends State<PracticeHomePage> {
     );
   }
 }
+
+class PracticeAllTensesScreen extends StatefulWidget {
+  @override
+  _PracticeAllTensesScreenState createState() =>
+      _PracticeAllTensesScreenState();
+}
+
+class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
+  String? teluguSentence;
+  String? englishSentence;
+  String? tense;
+  String userAnswer = '';
+  bool showAnswer = false;
+  bool loading = true;
+
+  Future<void> fetchRandomSentence() async {
+    setState(() {
+      loading = true;
+      showAnswer = false;
+      userAnswer = '';
+    });
+
+    final response = await http.get(Uri.parse('$baseUrl/get_random_sentence'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        tense = data['tense'];
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        loading = false;
+      });
+    } else {
+      // Handle error
+      setState(() {
+        teluguSentence = 'Error loading sentence';
+        englishSentence = '';
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchRandomSentence();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Practice All Tenses'),
+      ),
+      drawer: AppDrawer(),
+      body: loading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Tense: $tense', style: TextStyle(fontSize: 18)),
+                  SizedBox(height: 20),
+                  Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                  SizedBox(height: 10),
+                  Text(
+                    englishSentence ?? '',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 20),
+                  TextField(
+                    onChanged: (val) {
+                      userAnswer = val;
+                    },
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Your Telugu Translation',
+                    ),
+                    maxLines: 2,
+                  ),
+                  SizedBox(height: 10),
+                  if (showAnswer)
+                    Text(
+                      'Correct Answer:\n$teluguSentence',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        onPressed: fetchRandomSentence,
+                        child: Text('Next Sentence'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            showAnswer = true;
+                          });
+                        },
+                        child: Text('Show Answer'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Simple check ignoring case & whitespace
+                          if (userAnswer.trim() == teluguSentence?.trim()) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Correct!')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Try Again!')),
+                            );
+                          }
+                        },
+                        child: Text('Check Answer'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class TenseWisePracticeScreen extends StatefulWidget {
+  @override
+  _TenseWisePracticeScreenState createState() =>
+      _TenseWisePracticeScreenState();
+}
+
+class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
+  String? selectedTense;
+  List<String> tenses = [
+    'Simple Present',
+    // Add other tenses your backend supports
+  ];
+
+  String? teluguSentence;
+  String? englishSentence;
+  bool showAnswer = false;
+  bool loading = false;
+  String userAnswer = '';
+
+  Future<void> fetchSentenceByTense(String tense) async {
+    setState(() {
+      loading = true;
+      showAnswer = false;
+      userAnswer = '';
+    });
+
+    final response = await http
+        .get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=$tense'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        loading = false;
+      });
+    } else {
+      setState(() {
+        teluguSentence = 'Error loading sentence';
+        englishSentence = '';
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    selectedTense = tenses[0];
+    fetchSentenceByTense(selectedTense!);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Tense-wise Practice'),
+      ),
+      drawer: AppDrawer(),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            DropdownButton<String>(
+              value: selectedTense,
+              items: tenses
+                  .map((tense) => DropdownMenuItem(
+                        value: tense,
+                        child: Text(tense),
+                      ))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    selectedTense = val;
+                  });
+                  fetchSentenceByTense(val);
+                }
+              },
+            ),
+            SizedBox(height: 20),
+            loading
+                ? Center(child: CircularProgressIndicator())
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                      SizedBox(height: 10),
+                      Text(
+                        englishSentence ?? '',
+                        style:
+                            TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 20),
+                      TextField(
+                        onChanged: (val) {
+                          userAnswer = val;
+                        },
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Your Telugu Translation',
+                        ),
+                        maxLines: 2,
+                      ),
+                      SizedBox(height: 10),
+                      if (showAnswer)
+                        Text(
+                          'Correct Answer:\n$teluguSentence',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => fetchSentenceByTense(selectedTense!),
+                            child: Text('Next Sentence'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                showAnswer = true;
+                              });
+                            },
+                            child: Text('Show Answer'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (userAnswer.trim() == teluguSentence?.trim()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Correct!')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Try Again!')),
+                                );
+                              }
+                            },
+                            child: Text('Check Answer'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppDrawer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        children: [
