@@ -1,4 +1,4 @@
-
+import random
 
 
 # Sentence bank organized by tense
@@ -626,5 +626,19 @@ tense_sentences = {
 }
 
 
-def get_sentences_by_tense(tense):
-    return tense_sentences.get(tense, [])
+def get_random_sentence():
+    # Flatten all sentences from all tenses into one list
+    all_sentences = []
+    for tense, sentence_list in tense_sentences.items():
+        for telugu, english in sentence_list:
+            all_sentences.append((tense, telugu, english))
+    # Choose a random sentence tuple
+    tense, telugu, english = random.choice(all_sentences)
+    return {"tense": tense, "telugu": telugu, "english": english}
+
+def get_random_by_tense(tense):
+    if tense in tense_sentences:
+        telugu, english = random.choice(tense_sentences[tense])
+        return {"tense": tense, "telugu": telugu, "english": english}
+    else:
+        return {"error": "Invalid tense"}
