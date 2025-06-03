@@ -102,11 +102,31 @@ sentence_bank = [
     {"tense": "Simple Future", "telugu": "నేను రేపు ఎందుకు వెళ్లను?", "english": "Why won't I go tomorrow?"}
 ]
 
+
+
 def get_random_sentence():
-    """Return a random sentence dictionary from the entire bank."""
     return random.choice(sentence_bank)
 
 def get_random_sentence_by_tense(tense):
-    """Return a random sentence dictionary filtered by tense."""
     filtered = [s for s in sentence_bank if s["tense"] == tense]
     return random.choice(filtered) if filtered else None
+
+def main():
+    print("Random sentence from any tense:")
+    sentence = get_random_sentence()
+    print(f"Tense: {sentence['tense']}")
+    print(f"Telugu: {sentence['telugu']}")
+    print(f"English: {sentence['english']}")
+    print()
+    
+    print("Random sentence from Simple Present tense:")
+    sentence = get_random_sentence_by_tense("Simple Present")
+    if sentence:
+        print(f"Tense: {sentence['tense']}")
+        print(f"Telugu: {sentence['telugu']}")
+        print(f"English: {sentence['english']}")
+    else:
+        print("No sentences found for this tense.")
+
+if __name__ == "__main__":
+    main()
