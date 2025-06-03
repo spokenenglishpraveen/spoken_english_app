@@ -47,11 +47,11 @@ class _AllTensesPageState extends State<AllTensesPage> {
           children: [
             Text('Tense: $tense', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             SizedBox(height: 20),
-            Text('Translate this:', style: TextStyle(fontSize: 16)),
+            Text('Translate this Telugu sentence:', style: TextStyle(fontSize: 16)),
             SizedBox(height: 10),
-            Text(telugu, style: TextStyle(fontSize: 20, color: Colors.blueAccent)),
+            Text(telugu, style: TextStyle(fontSize: 20, color: Colors.blue)),
             SizedBox(height: 30),
-            Text('Answer:', style: TextStyle(fontSize: 16)),
+            Text('English Answer:', style: TextStyle(fontSize: 16)),
             Text(english, style: TextStyle(fontSize: 20, color: Colors.green)),
             SizedBox(height: 30),
             ElevatedButton(
