@@ -102,18 +102,30 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
       userAnswer = '';
     });
 
-    final response = await http.get(Uri.parse('$baseUrl/get_random_sentence'));
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/get_random_sentence'))
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          tense = data['tense'];
+          teluguSentence = data['telugu'];
+          englishSentence = data['english'];
+          loading = false;
+        });
+      } else {
+        setState(() {
+          teluguSentence = 'Error loading sentence (status: ${response.statusCode})';
+          englishSentence = '';
+          loading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching random sentence: $e');
       setState(() {
-        tense = data['tense'];
-        teluguSentence = data['telugu'];
-        englishSentence = data['english'];
-        loading = false;
-      });
-    } else {
-      setState(() {
-        teluguSentence = 'Error loading sentence';
+        teluguSentence = 'Failed to load sentence: $e';
         englishSentence = '';
         loading = false;
       });
@@ -133,72 +145,72 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
       drawer: AppDrawer(),
       body: loading
           ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Tense: $tense', style: TextStyle(fontSize: 18)),
-                  SizedBox(height: 20),
-                  Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
-                  SizedBox(height: 10),
-                  Text(
-                    englishSentence ?? '',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 20),
-                  TextField(
-                    onChanged: (val) => userAnswer = val,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(),
-                      labelText: 'Your Telugu Translation',
-                    ),
-                    maxLines: 2,
-                  ),
-                  SizedBox(height: 10),
-                  if (showAnswer)
-                    Text(
-                      'Correct Answer:\n$teluguSentence',
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+          : (teluguSentence == null || teluguSentence!.startsWith('Error') || teluguSentence!.startsWith('Failed'))
+              ? Center(child: Text(teluguSentence ?? 'Unknown error'))
+              : Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      ElevatedButton(
-                        onPressed: fetchRandomSentence,
-                        child: Text('Next Sentence'),
+                      Text('Tense: $tense', style: TextStyle(fontSize: 18)),
+                      SizedBox(height: 20),
+                      Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                      SizedBox(height: 10),
+                      Text(
+                        englishSentence ?? '',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            showAnswer = true;
-                          });
-                        },
-                        child: Text('Show Answer'),
+                      SizedBox(height: 20),
+                      TextField(
+                        onChanged: (val) => userAnswer = val,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Your Telugu Translation',
+                        ),
+                        maxLines: 2,
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          if (userAnswer.trim() == teluguSentence?.trim()) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Correct!')),
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Try Again!')),
-                            );
-                          }
-                        },
-                        child: Text('Check Answer'),
+                      SizedBox(height: 10),
+                      if (showAnswer)
+                        Text(
+                          'Correct Answer:\n$teluguSentence',
+                          style: TextStyle(
+                              fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      Spacer(),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          ElevatedButton(
+                            onPressed: fetchRandomSentence,
+                            child: Text('Next Sentence'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                showAnswer = true;
+                              });
+                            },
+                            child: Text('Show Answer'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (userAnswer.trim() == teluguSentence?.trim()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Correct!')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Try Again!')),
+                                );
+                              }
+                            },
+                            child: Text('Check Answer'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }
@@ -212,7 +224,18 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
   String? selectedTense;
   List<String> tenses = [
     'Simple Present',
-    // Add other tenses your backend supports
+    'Simple Past',
+    'Simple Future',
+    'Present Continuous',
+    'Past Continuous',
+    'Future Continuous',
+    'Present Perfect',
+    'Want to',
+    'Wanted to',
+    'Present Be Forms',
+    'Past Be Forms',
+    'Future Be Forms',
+    'Have to',
   ];
 
   String? teluguSentence;
@@ -228,17 +251,29 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
       userAnswer = '';
     });
 
-    final response = await http.get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=$tense'));
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=$tense'))
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          teluguSentence = data['telugu'];
+          englishSentence = data['english'];
+          loading = false;
+        });
+      } else {
+        setState(() {
+          teluguSentence = 'Error loading sentence (status: ${response.statusCode})';
+          englishSentence = '';
+          loading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching sentence by tense: $e');
       setState(() {
-        teluguSentence = data['telugu'];
-        englishSentence = data['english'];
-        loading = false;
-      });
-    } else {
-      setState(() {
-        teluguSentence = 'Error loading sentence';
+        teluguSentence = 'Failed to load sentence: $e';
         englishSentence = '';
         loading = false;
       });
@@ -281,69 +316,24 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
             SizedBox(height: 20),
             loading
                 ? Center(child: CircularProgressIndicator())
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
-                      SizedBox(height: 10),
-                      Text(
-                        englishSentence ?? '',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      SizedBox(height: 20),
-                      TextField(
-                        onChanged: (val) => userAnswer = val,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(),
-                          labelText: 'Your Telugu Translation',
-                        ),
-                        maxLines: 2,
-                      ),
-                      SizedBox(height: 10),
-                      if (showAnswer)
-                        Text(
-                          'Correct Answer:\n$teluguSentence',
-                          style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.green,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                : (teluguSentence == null || teluguSentence!.startsWith('Error') || teluguSentence!.startsWith('Failed'))
+                    ? Center(child: Text(teluguSentence ?? 'Unknown error'))
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          ElevatedButton(
-                            onPressed: () => fetchSentenceByTense(selectedTense!),
-                            child: Text('Next Sentence'),
+                          Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                          SizedBox(height: 10),
+                          Text(
+                            englishSentence ?? '',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                showAnswer = true;
-                              });
-                            },
-                            child: Text('Show Answer'),
+                          SizedBox(height: 20),
+                          TextField(
+                            onChanged: (val) => userAnswer = val,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'Your Telugu Translation',
+                            ),
+                            maxLines: 2,
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              if (userAnswer.trim() == teluguSentence?.trim()) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Correct!')),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Try Again!')),
-                                );
-                              }
-                            },
-                            child: Text('Check Answer'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-          ],
-        ),
-      ),
-    );
-  }
-}
+                          SizedBox(height: 
