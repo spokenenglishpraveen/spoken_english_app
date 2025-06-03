@@ -8,70 +8,92 @@ class TenseWisePage extends StatefulWidget {
 }
 
 class _TenseWisePageState extends State<TenseWisePage> {
+  final List<String> tenses = [
+    "Simple Present",
+    "Have to",
+  ];
+
   String selectedTense = "Simple Present";
-  String telugu = '';
-  String english = '';
-
-  List<String> tenses = ["Simple Present", "Have to"];
-
-  Future<void> fetchSentenceByTense(String tense) async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:5000/get_sentence_by_tense?tense=$tense'));
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      setState(() {
-        telugu = data['telugu'];
-        english = data['english'];
-      });
-    } else {
-      setState(() {
-        telugu = 'Error fetching data';
-        english = '';
-      });
-    }
-  }
+  String teluguSentence = "";
+  String correctEnglish = "";
+  String userAnswer = "";
+  String result = "";
 
   @override
   void initState() {
     super.initState();
-    fetchSentenceByTense(selectedTense);
+    fetchSentence();
+  }
+
+  Future<void> fetchSentence() async {
+    final response = await http.get(Uri.parse(
+        'http://localhost:5000/get_sentence_by_tense?tense=${Uri.encodeComponent(selectedTense)}'));
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        teluguSentence = data['telugu'] ?? '';
+        correctEnglish = data['english'] ?? '';
+        userAnswer = "";
+        result = "";
+      });
+    } else {
+      setState(() {
+        teluguSentence = "Failed to load sentence.";
+        correctEnglish = "";
+        result = "";
+      });
+    }
+  }
+
+  void checkAnswer() {
+    setState(() {
+      result = userAnswer.trim().toLowerCase() == correctEnglish.toLowerCase()
+          ? "✅ Correct!"
+          : "❌ Incorrect. Answer: $correctEnglish";
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Tense-wise Practice')),
+      appBar: AppBar(title: Text("Tense-wise Practice")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             DropdownButton<String>(
               value: selectedTense,
-              items: tenses.map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
+              onChanged: (value) {
+                setState(() {
+                  selectedTense = value!;
+                  fetchSentence();
+                });
+              },
+              items: tenses.map((tense) {
+                return DropdownMenuItem(
+                  value: tense,
+                  child: Text(tense),
                 );
               }).toList(),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedTense = newValue!;
-                  fetchSentenceByTense(selectedTense);
-                });
+            ),
+            SizedBox(height: 20),
+            Text("Translate this sentence:", style: TextStyle(fontSize: 18)),
+            SizedBox(height: 10),
+            Text(teluguSentence, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 20),
+            TextField(
+              decoration: InputDecoration(labelText: "Your English Translation"),
+              onChanged: (value) {
+                userAnswer = value;
               },
             ),
             SizedBox(height: 20),
-            Text('Translate this Telugu sentence:', style: TextStyle(fontSize: 16)),
+            ElevatedButton(onPressed: checkAnswer, child: Text("Check Answer")),
             SizedBox(height: 10),
-            Text(telugu, style: TextStyle(fontSize: 20, color: Colors.blue)),
-            SizedBox(height: 30),
-            Text('English Answer:', style: TextStyle(fontSize: 16)),
-            Text(english, style: TextStyle(fontSize: 20, color: Colors.green)),
-            SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () => fetchSentenceByTense(selectedTense),
-              child: Text('Next Sentence'),
-            )
+            ElevatedButton(onPressed: fetchSentence, child: Text("Next")),
+            SizedBox(height: 20),
+            Text(result, style: TextStyle(fontSize: 18, color: Colors.deepPurple)),
           ],
         ),
       ),
