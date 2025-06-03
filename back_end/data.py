@@ -625,8 +625,6 @@ tense_sentences = {
     ]
 }
 
-import random
-
 def get_random_sentence():
     all_sentences = []
     for group in tense_sentences.values():
@@ -634,8 +632,4 @@ def get_random_sentence():
     return random.choice(all_sentences)
 
 def get_random_by_tense(tense):
-    sentences = tense_sentences.get(tense, [])
-    if sentences:
-        return random.choice(sentences)
-    else:
-        return None
+    return random.choice(tense_sentences.get(tense, []))
