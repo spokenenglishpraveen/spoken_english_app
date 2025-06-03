@@ -8,41 +8,52 @@ class AllTensesPage extends StatefulWidget {
 }
 
 class _AllTensesPageState extends State<AllTensesPage> {
-  String telugu = "";
-  String english = "";
+  String teluguSentence = "";
+  String englishSentence = "";
+  String tense = "";
+  bool showAnswer = false;
 
-  Future<void> fetchSentence() async {
-    final response = await http.get(Uri.parse("http://<your-api-url>/get_random_sentence"));
+  @override
+  void initState() {
+    super.initState();
+    fetchRandomSentence();
+  }
+
+  Future<void> fetchRandomSentence() async {
+    final response = await http.get(Uri.parse('http://127.0.0.1:5000/get_random_sentence'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
-        telugu = data['telugu'];
-        english = data['english'];
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        tense = data['tense'];
+        showAnswer = false;
       });
     }
   }
 
   @override
-  void initState() {
-    super.initState();
-    fetchSentence();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("All Tenses Practice")),
+      appBar: AppBar(title: Text('Practice All Tenses')),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text("Telugu: $telugu"),
-            SizedBox(height: 10),
-            Text("English: $english"),
+            Text("Tense: $tense", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text("Telugu: $teluguSentence", style: TextStyle(fontSize: 20)),
             SizedBox(height: 20),
-            ElevatedButton(
-              child: Text("Next Sentence"),
-              onPressed: fetchSentence,
+            if (showAnswer)
+              Text("English: $englishSentence", style: TextStyle(fontSize: 20, color: Colors.green)),
+            SizedBox(height: 30),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(onPressed: () => setState(() => showAnswer = true), child: Text('Show Answer')),
+                SizedBox(width: 20),
+                ElevatedButton(onPressed: fetchRandomSentence, child: Text('Next')),
+              ],
             ),
           ],
         ),
@@ -50,4 +61,3 @@ class _AllTensesPageState extends State<AllTensesPage> {
     );
   }
 }
-
