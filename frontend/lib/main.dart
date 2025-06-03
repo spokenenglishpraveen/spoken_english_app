@@ -117,15 +117,15 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
         });
       } else {
         setState(() {
-          teluguSentence = 'Error loading sentence (status: \${response.statusCode})';
+          teluguSentence = 'Error loading sentence (status: ${response.statusCode})';
           englishSentence = '';
           loading = false;
         });
       }
     } catch (e) {
-      print('Error fetching random sentence: \$e');
+      print('Error fetching random sentence: $e');
       setState(() {
-        teluguSentence = 'Failed to load sentence: \$e';
+        teluguSentence = 'Failed to load sentence: $e';
         englishSentence = '';
         loading = false;
       });
@@ -152,7 +152,7 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Tense: \$tense', style: TextStyle(fontSize: 18)),
+                      Text('Tense: $tense', style: TextStyle(fontSize: 18)),
                       SizedBox(height: 20),
                       Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
                       SizedBox(height: 10),
@@ -172,7 +172,7 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
                       SizedBox(height: 10),
                       if (showAnswer)
                         Text(
-                          'Correct Answer:\n\$teluguSentence',
+                          'Correct Answer:\n$teluguSentence',
                           style: TextStyle(
                               fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold),
                         ),
@@ -243,7 +243,7 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
 
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=\$tense'))
+          .get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=$tense'))
           .timeout(Duration(seconds: 10));
 
       if (response.statusCode == 200) {
@@ -255,15 +255,15 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
         });
       } else {
         setState(() {
-          teluguSentence = 'Error loading sentence (status: \${response.statusCode})';
+          teluguSentence = 'Error loading sentence (status: ${response.statusCode})';
           englishSentence = '';
           loading = false;
         });
       }
     } catch (e) {
-      print('Error fetching sentence by tense: \$e');
+      print('Error fetching sentence by tense: $e');
       setState(() {
-        teluguSentence = 'Failed to load sentence: \$e';
+        teluguSentence = 'Failed to load sentence: $e';
         englishSentence = '';
         loading = false;
       });
@@ -329,7 +329,7 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
                           SizedBox(height: 10),
                           if (showAnswer)
                             Text(
-                              'Correct Answer:\n\$teluguSentence',
+                              'Correct Answer:\n$teluguSentence',
                               style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.green,
