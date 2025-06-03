@@ -15,6 +15,10 @@ class _TenseWisePageState extends State<TenseWisePage> {
   String userAnswer = "";
   String result = "";
   bool isLoading = true;
+  bool isSentenceLoading = false;
+  String error = "";
+
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
@@ -22,56 +26,98 @@ class _TenseWisePageState extends State<TenseWisePage> {
     fetchTenses();
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> fetchTenses() async {
-    final response = await http.get(Uri.parse('https://spoken-english-app-5.onrender.com/get_all_tenses'));
+    setState(() {
+      isLoading = true;
+      error = "";
+    });
 
-    if (response.statusCode == 200) {
-      List<dynamic> data = jsonDecode(response.body);
-      print("Fetched tenses: $data"); // 🐛 Debug print
+    try {
+      final response = await http
+          .get(Uri.parse('https://spoken-english-app-5.onrender.com/get_all_tenses'))
+          .timeout(Duration(seconds: 10));
 
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        setState(() {
+          tenses = List<String>.from(data);
+          selectedTense = tenses.isNotEmpty ? tenses.first : "";
+          isLoading = false;
+        });
+        if (selectedTense.isNotEmpty) {
+          fetchSentence();
+        }
+      } else {
+        setState(() {
+          error = "Failed to fetch tenses: ${response.statusCode}";
+          tenses = ["Simple Present"];
+          selectedTense = "Simple Present";
+          isLoading = false;
+        });
+        fetchSentence();
+      }
+    } catch (e) {
       setState(() {
-        tenses = List<String>.from(data);
-        selectedTense = tenses.first;
-        isLoading = false;
-      });
-
-      fetchSentence();
-    } else {
-      print("Failed to fetch tenses");
-      setState(() {
+        error = "Error fetching tenses: $e";
         tenses = ["Simple Present"];
         selectedTense = "Simple Present";
         isLoading = false;
       });
+      fetchSentence();
     }
   }
 
   Future<void> fetchSentence() async {
-    final response = await http.get(Uri.parse(
-        'https://spoken-english-app-5.onrender.com/get_sentence_by_tense?tense=${Uri.encodeComponent(selectedTense)}'));
+    setState(() {
+      isSentenceLoading = true;
+      error = "";
+      result = "";
+      userAnswer = "";
+      _controller.clear();
+    });
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    try {
+      final response = await http.get(Uri.parse(
+          'https://spoken-english-app-5.onrender.com/get_sentence_by_tense?tense=${Uri.encodeComponent(selectedTense)}')).timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          teluguSentence = data['telugu'] ?? '';
+          correctEnglish = data['english'] ?? '';
+          isSentenceLoading = false;
+        });
+      } else {
+        setState(() {
+          error = "Failed to load sentence: ${response.statusCode}";
+          teluguSentence = "";
+          correctEnglish = "";
+          isSentenceLoading = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        teluguSentence = data['telugu'] ?? '';
-        correctEnglish = data['english'] ?? '';
-        userAnswer = "";
-        result = "";
-      });
-    } else {
-      setState(() {
-        teluguSentence = "Failed to load sentence.";
+        error = "Error fetching sentence: $e";
+        teluguSentence = "";
         correctEnglish = "";
-        result = "";
+        isSentenceLoading = false;
       });
     }
   }
 
   void checkAnswer() {
     setState(() {
-      result = userAnswer.trim().toLowerCase() == correctEnglish.toLowerCase()
-          ? "✅ Correct!"
-          : "❌ Incorrect. Answer: $correctEnglish";
+      if (userAnswer.trim().toLowerCase() == correctEnglish.toLowerCase()) {
+        result = "✅ Correct!";
+      } else {
+        result = "❌ Incorrect. Answer: $correctEnglish";
+      }
     });
   }
 
@@ -90,13 +136,20 @@ class _TenseWisePageState extends State<TenseWisePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            if (error.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(error, style: TextStyle(color: Colors.red, fontSize: 16)),
+              ),
             DropdownButton<String>(
               value: selectedTense,
               onChanged: (value) {
-                setState(() {
-                  selectedTense = value!;
+                if (value != null) {
+                  setState(() {
+                    selectedTense = value;
+                  });
                   fetchSentence();
-                });
+                }
               },
               items: tenses.map((tense) {
                 return DropdownMenuItem(
@@ -106,22 +159,28 @@ class _TenseWisePageState extends State<TenseWisePage> {
               }).toList(),
             ),
             SizedBox(height: 20),
-            Text("Translate this sentence:", style: TextStyle(fontSize: 18)),
-            SizedBox(height: 10),
-            Text(teluguSentence, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-            TextField(
-              decoration: InputDecoration(labelText: "Your English Translation"),
-              onChanged: (value) {
-                userAnswer = value;
-              },
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(onPressed: checkAnswer, child: Text("Check Answer")),
-            SizedBox(height: 10),
-            ElevatedButton(onPressed: fetchSentence, child: Text("Next")),
-            SizedBox(height: 20),
-            Text(result, style: TextStyle(fontSize: 18, color: Colors.deepPurple)),
+            if (isSentenceLoading)
+              Center(child: CircularProgressIndicator())
+            else ...[
+              Text("Translate this sentence:", style: TextStyle(fontSize: 18)),
+              SizedBox(height: 10),
+              Text(teluguSentence, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              SizedBox(height: 20),
+              TextField(
+                controller: _controller,
+                decoration: InputDecoration(labelText: "Your English Translation"),
+                onChanged: (value) {
+                  userAnswer = value;
+                },
+                maxLines: 2,
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(onPressed: checkAnswer, child: Text("Check Answer")),
+              SizedBox(height: 10),
+              ElevatedButton(onPressed: fetchSentence, child: Text("Next")),
+              SizedBox(height: 20),
+              Text(result, style: TextStyle(fontSize: 18, color: Colors.deepPurple)),
+            ]
           ],
         ),
       ),
