@@ -20,7 +20,7 @@ class _AllTensesPageState extends State<AllTensesPage> {
   }
 
   Future<void> fetchSentence() async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:5000/get_random_sentence'));
+    final response = await http.get(Uri.parse('https://spoken-english-app-5.onrender.com/get_random_sentence'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
