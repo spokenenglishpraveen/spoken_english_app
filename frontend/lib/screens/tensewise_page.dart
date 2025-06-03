@@ -8,62 +8,73 @@ class TenseWisePage extends StatefulWidget {
 }
 
 class _TenseWisePageState extends State<TenseWisePage> {
-  String selectedTense = "Simple Present";
-  String telugu = "";
-  String english = "";
+  final List<String> tenses = ['Simple Present', 'Have to'];
+  String? selectedTense;
+  String teluguSentence = "";
+  String englishSentence = "";
+  bool showAnswer = false;
 
-  List<String> tenses = ["Simple Present" /*, Add more */];
-
-  Future<void> fetchTenseSentence() async {
-    final response = await http.get(Uri.parse("http://<your-api-url>/get_sentence_by_tense?tense=$selectedTense"));
+  Future<void> fetchSentenceByTense(String tense) async {
+    final response = await http.get(Uri.parse('http://127.0.0.1:5000/get_sentence_by_tense?tense=$tense'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
-        telugu = data['telugu'];
-        english = data['english'];
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        showAnswer = false;
       });
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchTenseSentence();
+  Widget buildPracticeUI() {
+    if (selectedTense == null) return Container();
+
+    return Column(
+      children: [
+        SizedBox(height: 16),
+        Text("Telugu: $teluguSentence", style: TextStyle(fontSize: 20)),
+        SizedBox(height: 20),
+        if (showAnswer)
+          Text("English: $englishSentence", style: TextStyle(fontSize: 20, color: Colors.green)),
+        SizedBox(height: 30),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(onPressed: () => setState(() => showAnswer = true), child: Text('Show Answer')),
+            SizedBox(width: 20),
+            ElevatedButton(onPressed: () => fetchSentenceByTense(selectedTense!), child: Text('Next')),
+          ],
+        )
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Tense-wise Practice")),
+      appBar: AppBar(title: Text('Tense-wise Practice')),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             DropdownButton<String>(
+              hint: Text("Select Tense"),
               value: selectedTense,
               onChanged: (value) {
                 setState(() {
-                  selectedTense = value!;
-                  fetchTenseSentence();
+                  selectedTense = value;
                 });
+                fetchSentenceByTense(value!);
               },
-              items: tenses.map((String tense) {
+              items: tenses.map((tense) {
                 return DropdownMenuItem(value: tense, child: Text(tense));
               }).toList(),
             ),
             SizedBox(height: 20),
-            Text("Telugu: $telugu"),
-            SizedBox(height: 10),
-            Text("English: $english"),
-            SizedBox(height: 20),
-            ElevatedButton(
-              child: Text("Next"),
-              onPressed: fetchTenseSentence,
-            ),
+            buildPracticeUI(),
           ],
         ),
       ),
     );
   }
 }
-
