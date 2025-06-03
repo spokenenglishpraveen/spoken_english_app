@@ -6,13 +6,15 @@ void main() {
   runApp(MyApp());
 }
 
-// Put AppDrawer here, before HomeScreen, so it’s defined before usage
+// Change this to your deployed Flask backend URL
+const String baseUrl = 'https://spoken-english-app-5.onrender.com';
+
 class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
-        padding: EdgeInsets.zero, // remove default padding on top
+        padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
             decoration: BoxDecoration(color: Colors.blue),
@@ -80,28 +82,48 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// -- PracticeAllTensesScreen code here (omitted for brevity), with drawer: AppDrawer()
-
 class PracticeAllTensesScreen extends StatefulWidget {
   @override
   _PracticeAllTensesScreenState createState() => _PracticeAllTensesScreenState();
 }
 
 class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
-  // Your variables...
+  String? teluguSentence;
+  String? englishSentence;
+  String? tense;
+  String userAnswer = '';
+  bool showAnswer = false;
+  bool loading = true;
+
+  Future<void> fetchRandomSentence() async {
+    setState(() {
+      loading = true;
+      showAnswer = false;
+      userAnswer = '';
+    });
+
+    final response = await http.get(Uri.parse('$baseUrl/get_random_sentence'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        tense = data['tense'];
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        loading = false;
+      });
+    } else {
+      setState(() {
+        teluguSentence = 'Error loading sentence';
+        englishSentence = '';
+        loading = false;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    // fetch initial data
-  }
-
-  Future<void> fetchRandomSentence() async {
-    setState(() {
-      // set loading states
-    });
-
-    // fetch from backend
+    fetchRandomSentence();
   }
 
   @override
@@ -109,14 +131,77 @@ class _PracticeAllTensesScreenState extends State<PracticeAllTensesScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Practice All Tenses')),
       drawer: AppDrawer(),
-      body: Center(
-        child: Text('Implement your UI here...'),
-      ),
+      body: loading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Tense: $tense', style: TextStyle(fontSize: 18)),
+                  SizedBox(height: 20),
+                  Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                  SizedBox(height: 10),
+                  Text(
+                    englishSentence ?? '',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 20),
+                  TextField(
+                    onChanged: (val) => userAnswer = val,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Your Telugu Translation',
+                    ),
+                    maxLines: 2,
+                  ),
+                  SizedBox(height: 10),
+                  if (showAnswer)
+                    Text(
+                      'Correct Answer:\n$teluguSentence',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        onPressed: fetchRandomSentence,
+                        child: Text('Next Sentence'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            showAnswer = true;
+                          });
+                        },
+                        child: Text('Show Answer'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          if (userAnswer.trim() == teluguSentence?.trim()) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Correct!')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Try Again!')),
+                            );
+                          }
+                        },
+                        child: Text('Check Answer'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }
-
-// -- Now TenseWisePracticeScreen below --
 
 class TenseWisePracticeScreen extends StatefulWidget {
   @override
@@ -125,7 +210,10 @@ class TenseWisePracticeScreen extends StatefulWidget {
 
 class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
   String? selectedTense;
-  List<String> tenses = ['Simple Present'];
+  List<String> tenses = [
+    'Simple Present',
+    // Add other tenses your backend supports
+  ];
 
   String? teluguSentence;
   String? englishSentence;
@@ -140,12 +228,21 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
       userAnswer = '';
     });
 
-    // your fetch code here
-
-    setState(() {
-      loading = false;
-      // update sentences from backend response
-    });
+    final response = await http.get(Uri.parse('$baseUrl/get_sentence_by_tense?tense=$tense'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        teluguSentence = data['telugu'];
+        englishSentence = data['english'];
+        loading = false;
+      });
+    } else {
+      setState(() {
+        teluguSentence = 'Error loading sentence';
+        englishSentence = '';
+        loading = false;
+      });
+    }
   }
 
   @override
@@ -157,11 +254,96 @@ class _TenseWisePracticeScreenState extends State<TenseWisePracticeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Your build method implementation here
     return Scaffold(
       appBar: AppBar(title: Text('Tense-wise Practice')),
       drawer: AppDrawer(),
-      body: Center(child: Text('Implement your UI here...')),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: [
+            DropdownButton<String>(
+              value: selectedTense,
+              items: tenses
+                  .map((tense) => DropdownMenuItem(
+                        value: tense,
+                        child: Text(tense),
+                      ))
+                  .toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() {
+                    selectedTense = val;
+                  });
+                  fetchSentenceByTense(val);
+                }
+              },
+            ),
+            SizedBox(height: 20),
+            loading
+                ? Center(child: CircularProgressIndicator())
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Translate to Telugu:', style: TextStyle(fontSize: 16)),
+                      SizedBox(height: 10),
+                      Text(
+                        englishSentence ?? '',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 20),
+                      TextField(
+                        onChanged: (val) => userAnswer = val,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Your Telugu Translation',
+                        ),
+                        maxLines: 2,
+                      ),
+                      SizedBox(height: 10),
+                      if (showAnswer)
+                        Text(
+                          'Correct Answer:\n$teluguSentence',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => fetchSentenceByTense(selectedTense!),
+                            child: Text('Next Sentence'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                showAnswer = true;
+                              });
+                            },
+                            child: Text('Show Answer'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (userAnswer.trim() == teluguSentence?.trim()) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Correct!')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Try Again!')),
+                                );
+                              }
+                            },
+                            child: Text('Check Answer'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+          ],
+        ),
+      ),
     );
   }
 }
