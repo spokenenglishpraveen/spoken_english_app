@@ -23,7 +23,7 @@ class _TenseWisePageState extends State<TenseWisePage> {
   }
 
   Future<void> fetchTenses() async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:5000/get_all_tenses'));
+    final response = await http.get(Uri.parse('https://spoken-english-app-5.onrender.com/get_all_tenses'));
 
     if (response.statusCode == 200) {
       List<dynamic> data = jsonDecode(response.body);
@@ -48,7 +48,7 @@ class _TenseWisePageState extends State<TenseWisePage> {
 
   Future<void> fetchSentence() async {
     final response = await http.get(Uri.parse(
-        'http://127.0.0.1:5000/get_sentence_by_tense?tense=${Uri.encodeComponent(selectedTense)}'));
+        'https://spoken-english-app-5.onrender.com/get_sentence_by_tense?tense=${Uri.encodeComponent(selectedTense)}'));
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
